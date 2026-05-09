@@ -1,0 +1,217 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+
+type Lang = "ar" | "en";
+
+const dict = {
+  ar: {
+    appName: "روان كروب",
+    tagline: "إدارة عمليات بيع أجهزة الستلايت",
+    dashboard: "لوحة التحكم",
+    orders: "الطلبات",
+    employees: "الموظفون",
+    reports: "التقارير",
+    logout: "تسجيل الخروج",
+    login: "تسجيل الدخول",
+    signup: "إنشاء حساب",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    fullName: "الاسم الكامل",
+    phone: "رقم الهاتف",
+    welcome: "مرحباً بعودتك",
+    createAccount: "أنشئ حسابك للبدء",
+    haveAccount: "لديك حساب؟",
+    noAccount: "ليس لديك حساب؟",
+    totalOrders: "إجمالي الطلبات",
+    newOrders: "طلبات جديدة",
+    processingOrders: "قيد المعالجة",
+    completedOrders: "مكتملة",
+    activeEmployees: "الموظفون النشطون",
+    addOrder: "إضافة طلب",
+    customerName: "اسم الزبون",
+    customerPhone: "هاتف الزبون",
+    product: "المنتج",
+    status: "الحالة",
+    notes: "ملاحظات",
+    deviceCode: "كود الجهاز",
+    actions: "إجراءات",
+    save: "حفظ",
+    cancel: "إلغاء",
+    new: "جديد",
+    processing: "قيد المعالجة",
+    activated: "تم التفعيل",
+    completed: "مكتمل",
+    cancelled: "ملغي",
+    role: "الدور",
+    manager: "مدير",
+    receptionist: "مستقبل طلبات",
+    support: "دعم فني",
+    activator: "مفعّل أكواد",
+    none: "لا يوجد",
+    assignRole: "تعيين دور",
+    recentActivity: "آخر النشاطات",
+    employeePerformance: "أداء الموظفين",
+    noData: "لا توجد بيانات",
+    source: "المصدر",
+    call: "اتصال",
+    whatsapp: "واتساب",
+    other: "أخرى",
+    addNote: "إضافة ملاحظة",
+    activateCode: "تفعيل الكود",
+    markProblemResolved: "تم حل المشكلة",
+    activityLog: "سجل النشاط",
+    tasksHandled: "المهام المنجزة",
+    ordersReceived: "طلبات مستلمة",
+    problemsResolved: "مشاكل محلولة",
+    codesActivated: "أكواد مفعّلة",
+    settings: "الإعدادات",
+    yourRole: "دورك",
+    pendingRole: "بانتظار تعيين دور من المدير",
+    orderDetails: "تفاصيل الطلب",
+    today: "اليوم",
+    last7days: "آخر 7 أيام",
+    last30days: "آخر 30 يوم",
+    enterEmail: "أدخل بريدك الإلكتروني",
+    enterPassword: "أدخل كلمة المرور",
+    loginSuccess: "تم تسجيل الدخول بنجاح",
+    signupSuccess: "تم إنشاء الحساب بنجاح",
+    error: "خطأ",
+    saved: "تم الحفظ",
+    confirmDelete: "هل أنت متأكد من الحذف؟",
+    delete: "حذف",
+    edit: "تعديل",
+    search: "بحث",
+    allStatuses: "كل الحالات",
+    home: "الرئيسية",
+    getStarted: "ابدأ الآن",
+    heroTitle: "نظام متابعة موظفي روان كروب",
+    heroSub: "تابع طلبات الزبائن، حالة الأجهزة، وأداء كل موظف من مكان واحد",
+  },
+  en: {
+    appName: "Rawan Crop",
+    tagline: "Satellite device sales operations",
+    dashboard: "Dashboard",
+    orders: "Orders",
+    employees: "Employees",
+    reports: "Reports",
+    logout: "Logout",
+    login: "Sign in",
+    signup: "Sign up",
+    email: "Email",
+    password: "Password",
+    fullName: "Full name",
+    phone: "Phone",
+    welcome: "Welcome back",
+    createAccount: "Create your account to get started",
+    haveAccount: "Have an account?",
+    noAccount: "No account?",
+    totalOrders: "Total Orders",
+    newOrders: "New Orders",
+    processingOrders: "Processing",
+    completedOrders: "Completed",
+    activeEmployees: "Active Employees",
+    addOrder: "Add order",
+    customerName: "Customer name",
+    customerPhone: "Customer phone",
+    product: "Product",
+    status: "Status",
+    notes: "Notes",
+    deviceCode: "Device code",
+    actions: "Actions",
+    save: "Save",
+    cancel: "Cancel",
+    new: "New",
+    processing: "Processing",
+    activated: "Activated",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    role: "Role",
+    manager: "Manager",
+    receptionist: "Reception",
+    support: "Support",
+    activator: "Activator",
+    none: "None",
+    assignRole: "Assign role",
+    recentActivity: "Recent activity",
+    employeePerformance: "Employee performance",
+    noData: "No data",
+    source: "Source",
+    call: "Call",
+    whatsapp: "WhatsApp",
+    other: "Other",
+    addNote: "Add note",
+    activateCode: "Activate code",
+    markProblemResolved: "Problem resolved",
+    activityLog: "Activity log",
+    tasksHandled: "Tasks handled",
+    ordersReceived: "Orders received",
+    problemsResolved: "Problems resolved",
+    codesActivated: "Codes activated",
+    settings: "Settings",
+    yourRole: "Your role",
+    pendingRole: "Awaiting role assignment from manager",
+    orderDetails: "Order details",
+    today: "Today",
+    last7days: "Last 7 days",
+    last30days: "Last 30 days",
+    enterEmail: "Enter your email",
+    enterPassword: "Enter password",
+    loginSuccess: "Signed in",
+    signupSuccess: "Account created",
+    error: "Error",
+    saved: "Saved",
+    confirmDelete: "Are you sure?",
+    delete: "Delete",
+    edit: "Edit",
+    search: "Search",
+    allStatuses: "All statuses",
+    home: "Home",
+    getStarted: "Get started",
+    heroTitle: "Rawan Crop Employee Operations",
+    heroSub: "Track orders, device status, and employee performance in one place",
+  },
+} as const;
+
+type Key = keyof typeof dict.ar;
+
+interface I18nCtx {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (k: Key) => string;
+  dir: "rtl" | "ltr";
+}
+
+const Ctx = createContext<I18nCtx | null>(null);
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>("ar");
+
+  useEffect(() => {
+    const stored = (typeof window !== "undefined" && localStorage.getItem("lang")) as Lang | null;
+    if (stored === "ar" || stored === "en") setLangState(stored);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  }, [lang]);
+
+  const setLang = (l: Lang) => {
+    setLangState(l);
+    if (typeof window !== "undefined") localStorage.setItem("lang", l);
+  };
+
+  const t = (k: Key) => dict[lang][k] ?? k;
+
+  return (
+    <Ctx.Provider value={{ lang, setLang, t, dir: lang === "ar" ? "rtl" : "ltr" }}>
+      {children}
+    </Ctx.Provider>
+  );
+}
+
+export function useI18n() {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("useI18n must be used within I18nProvider");
+  return ctx;
+}
