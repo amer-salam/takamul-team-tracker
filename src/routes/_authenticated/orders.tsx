@@ -61,7 +61,7 @@ function OrdersPage() {
 
   const canAdd = isManager || roles.includes("receptionist");
 
-  const updateStatus = async (orderId: string, status: string, taskType?: "problem_resolved" | "code_activated", desc?: string) => {
+  const updateStatus = async (orderId: string, status: typeof STATUSES[number], taskType?: "problem_resolved" | "code_activated", desc?: string) => {
     const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
     if (error) { toast.error(error.message); return; }
     if (taskType && user) {
@@ -160,7 +160,7 @@ function OrdersPage() {
                     <KeyRound className="h-4 w-4 me-1" />{t("activateCode")}
                   </Button>
                 )}
-                <Select value={o.status} onValueChange={(v) => updateStatus(o.id, v)}>
+                <Select value={o.status} onValueChange={(v) => updateStatus(o.id, v as typeof STATUSES[number])}>
                   <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(s as never)}</SelectItem>)}
