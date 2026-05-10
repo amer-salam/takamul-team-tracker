@@ -83,7 +83,7 @@ function DeliveryPage() {
   };
 
   const setOrderStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from("orders").update({ status, assigned_delivery: user?.id }).eq("id", id);
+    const { error } = await supabase.from("orders").update({ status: status as any, assigned_delivery: user?.id }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(t("saved"));
     qc.invalidateQueries({ queryKey: ["delivery-ready"] });
