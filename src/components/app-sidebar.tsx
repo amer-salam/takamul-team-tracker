@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Package, Users, BarChart3, LogOut, Satellite, Languages } from "lucide-react";
+import { LayoutDashboard, Package, Users, BarChart3, LogOut, Satellite, Languages, ClipboardCheck, Truck, AlertCircle } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -19,18 +19,19 @@ import { useI18n } from "@/lib/i18n";
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { signOut, isManager } = useAuth();
+  const { signOut, isManager, roles } = useAuth();
   const { t, lang, setLang } = useI18n();
   const path = useRouterState({ select: (s) => s.location.pathname });
 
   const items = [
-    { to: "/dashboard", label: t("dashboard"), icon: LayoutDashboard },
-    { to: "/orders", label: t("orders"), icon: Package },
-    ...(isManager ? [
-      { to: "/employees", label: t("employees"), icon: Users },
-      { to: "/reports", label: t("reports"), icon: BarChart3 },
-    ] : []),
-  ];
+    { to: "/dashboard", label: t("dashboard"), icon: LayoutDashboard, show: true },
+    { to: "/orders", label: t("orders"), icon: Package, show: true },
+    { to: "/audit", label: t("audit"), icon: ClipboardCheck, show: isManager || roles.includes("auditor") },
+    { to: "/delivery", label: t("delivery"), icon: Truck, show: isManager || roles.includes("delivery") },
+    { to: "/issues", label: t("issues"), icon: AlertCircle, show: isManager || roles.includes("support") || roles.includes("receptionist") },
+    { to: "/employees", label: t("employees"), icon: Users, show: isManager },
+    { to: "/reports", label: t("reports"), icon: BarChart3, show: isManager },
+  ].filter((i) => i.show);
 
   return (
     <Sidebar collapsible="icon">
