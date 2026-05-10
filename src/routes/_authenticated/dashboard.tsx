@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Clock, CheckCircle2, Users, Plus, Activity } from "lucide-react";
+import { Package, Clock, CheckCircle2, Users, Plus, Activity, AlertCircle, RotateCcw, DollarSign } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 
@@ -17,7 +17,7 @@ function StatCard({ icon: Icon, label, value, tone }: { icon: any; label: string
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-3xl font-bold mt-2">{value}</p>
+          <p className="text-2xl md:text-3xl font-bold mt-2">{value}</p>
         </div>
         <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: tone }}>
           <Icon className="h-5 w-5 text-primary-foreground" />
@@ -30,27 +30,33 @@ function StatCard({ icon: Icon, label, value, tone }: { icon: any; label: string
 function Dashboard() {
   const { t, lang } = useI18n();
   const { isManager, user } = useAuth();
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
-      const { data: orders } = await supabase.from("orders").select("status");
+      const [{ data: orders }, { data: issues }, { data: todayOrders }] = await Promise.all([
+        supabase.from("orders").select("status, price"),
+        supabase.from("issues").select("status"),
+        supabase.from("orders").select("id, price, status").gte("created_at", todayStart.toISOString()),
+      ]);
       const list = orders ?? [];
+      const inProgress = list.filter((o) => ["pending_audit","audited_printed","in_delivery","processing","new"].includes(o.status as string)).length;
+      const completed = list.filter((o) => ["delivered","completed","activated"].includes(o.status as string)).length;
+      const returned = list.filter((o) => o.status === "returned").length;
+      const revenue = list
+        .filter((o) => ["delivered","completed","activated"].includes(o.status as string))
+        .reduce((s, o: any) => s + Number(o.price ?? 0), 0);
+      const issuesOpen = (issues ?? []).filter((i) => i.status === "open").length;
       return {
         total: list.length,
-        new: list.filter((o) => o.status === "new").length,
-        processing: list.filter((o) => o.status === "processing").length,
-        completed: list.filter((o) => o.status === "completed" || o.status === "activated").length,
+        inProgress,
+        completed,
+        returned,
+        revenue,
+        todayCount: (todayOrders ?? []).length,
+        issuesOpen,
       };
-    },
-  });
-
-  const { data: employeeCount } = useQuery({
-    queryKey: ["employee-count"],
-    enabled: isManager,
-    queryFn: async () => {
-      const { count } = await supabase.from("user_roles").select("user_id", { count: "exact", head: true });
-      return count ?? 0;
     },
   });
 
@@ -74,13 +80,14 @@ function Dashboard() {
       const list = data ?? [];
       return {
         ordersReceived: list.filter((x) => x.task_type === "order_received").length,
-        problemsResolved: list.filter((x) => x.task_type === "problem_resolved").length,
+        problemsResolved: list.filter((x) => x.task_type === "problem_resolved" || x.task_type === "issue_resolved").length,
         codesActivated: list.filter((x) => x.task_type === "code_activated").length,
       };
     },
   });
 
   const locale = lang === "ar" ? ar : enUS;
+  const fmt = (n: number) => n.toLocaleString(lang === "ar" ? "ar" : "en");
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -89,32 +96,30 @@ function Dashboard() {
           <h1 className="text-2xl md:text-3xl font-bold">{t("dashboard")}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t("tagline")}</p>
         </div>
-        <Link to="/orders">
-          <Button><Plus className="h-4 w-4 me-1" />{t("addOrder")}</Button>
-        </Link>
+        <Link to="/orders"><Button><Plus className="h-4 w-4 me-1" />{t("addOrder")}</Button></Link>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Package} label={t("totalOrders")} value={stats?.total ?? 0} tone="var(--gradient-hero)" />
-        <StatCard icon={Clock} label={t("newOrders")} value={stats?.new ?? 0} tone="oklch(0.6 0.18 250)" />
-        <StatCard icon={Activity} label={t("processingOrders")} value={stats?.processing ?? 0} tone="var(--gradient-gold)" />
-        <StatCard icon={CheckCircle2} label={t("completedOrders")} value={stats?.completed ?? 0} tone="oklch(0.6 0.16 155)" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard icon={Package} label={t("todaysOrders")} value={fmt(stats?.todayCount ?? 0)} tone="var(--gradient-hero)" />
+        <StatCard icon={Clock} label={t("inProgress")} value={fmt(stats?.inProgress ?? 0)} tone="oklch(0.6 0.18 250)" />
+        <StatCard icon={CheckCircle2} label={t("completedOrders")} value={fmt(stats?.completed ?? 0)} tone="oklch(0.6 0.16 155)" />
+        <StatCard icon={RotateCcw} label={t("returnedOrders")} value={fmt(stats?.returned ?? 0)} tone="oklch(0.6 0.22 25)" />
+        <StatCard icon={DollarSign} label={t("revenue")} value={fmt(stats?.revenue ?? 0)} tone="var(--gradient-gold)" />
+        <StatCard icon={AlertCircle} label={t("issuesCount")} value={fmt(stats?.issuesOpen ?? 0)} tone="oklch(0.65 0.2 30)" />
+        <StatCard icon={Package} label={t("totalOrders")} value={fmt(stats?.total ?? 0)} tone="oklch(0.55 0.16 255)" />
+        <StatCard icon={Activity} label={t("activityLog")} value={fmt(recent?.length ?? 0)} tone="oklch(0.5 0.05 270)" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-5 lg:col-span-2">
-          <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
-            <Activity className="h-5 w-5" />{t("recentActivity")}
-          </h2>
+          <h2 className="font-semibold text-lg mb-4 flex items-center gap-2"><Activity className="h-5 w-5" />{t("recentActivity")}</h2>
           {!recent || recent.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">{t("noData")}</p>
           ) : (
             <ul className="space-y-3">
               {recent.map((task: any) => (
                 <li key={task.id} className="flex items-start gap-3 pb-3 border-b last:border-0">
-                  <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                    <Activity className="h-4 w-4" />
-                  </div>
+                  <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center shrink-0"><Activity className="h-4 w-4" /></div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{task.profiles?.full_name ?? "—"}</p>
                     <p className="text-xs text-muted-foreground truncate">
@@ -133,13 +138,7 @@ function Dashboard() {
 
         <Card className="p-5">
           <h2 className="font-semibold text-lg mb-4">{isManager ? t("activeEmployees") : t("tasksHandled")}</h2>
-          {isManager ? (
-            <div className="text-center py-6">
-              <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-              <p className="text-4xl font-bold">{employeeCount ?? 0}</p>
-              <p className="text-sm text-muted-foreground mt-1">{t("activeEmployees")}</p>
-            </div>
-          ) : (
+          {isManager ? <ManagerEmpBlock /> : (
             <div className="space-y-3">
               <Row label={t("ordersReceived")} value={myStats?.ordersReceived ?? 0} />
               <Row label={t("problemsResolved")} value={myStats?.problemsResolved ?? 0} />
@@ -148,6 +147,24 @@ function Dashboard() {
           )}
         </Card>
       </div>
+    </div>
+  );
+}
+
+function ManagerEmpBlock() {
+  const { t } = useI18n();
+  const { data: count } = useQuery({
+    queryKey: ["employee-count"],
+    queryFn: async () => {
+      const { count } = await supabase.from("user_roles").select("user_id", { count: "exact", head: true });
+      return count ?? 0;
+    },
+  });
+  return (
+    <div className="text-center py-6">
+      <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+      <p className="text-4xl font-bold">{count ?? 0}</p>
+      <p className="text-sm text-muted-foreground mt-1">{t("activeEmployees")}</p>
     </div>
   );
 }
