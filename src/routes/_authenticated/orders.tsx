@@ -71,7 +71,7 @@ function OrdersPage() {
   const canAdd = isManager || roles.includes("receptionist");
 
   const updateStatus = async (orderId: string, status: string) => {
-    const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
+    const { error } = await supabase.from("orders").update({ status: status as any }).eq("id", orderId);
     if (error) { toast.error(error.message); return; }
     toast.success(t("saved"));
     qc.invalidateQueries({ queryKey: ["orders"] });
