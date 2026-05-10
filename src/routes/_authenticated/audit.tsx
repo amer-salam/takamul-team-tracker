@@ -98,7 +98,7 @@ function AuditPage() {
           <Card className="p-10 text-center text-muted-foreground">{t("noData")}</Card>
         )}
         {(orders ?? []).map((o: any) => (
-          <AuditCard key={o.id} order={o} onMark={markAudited} onPrint={printReceipt} onSave={async (patch) => {
+          <AuditCard key={o.id} order={o} onMark={markAudited} onPrint={printReceipt} onSave={async (patch: any) => {
             const ok = await updateOrder(o.id, patch);
             if (ok) { toast.success(t("saved")); qc.invalidateQueries({ queryKey: ["audit-orders"] }); }
           }} />
