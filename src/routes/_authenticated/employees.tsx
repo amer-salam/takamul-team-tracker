@@ -12,7 +12,7 @@ import { Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/employees")({ component: EmployeesPage });
 
-const ROLES: AppRole[] = ["manager", "receptionist", "support", "activator"];
+const ROLES: AppRole[] = ["manager", "receptionist", "auditor", "delivery", "support", "activator"];
 
 function EmployeesPage() {
   const { t } = useI18n();

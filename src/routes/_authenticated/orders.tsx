@@ -16,27 +16,35 @@ import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Phone, MessageCircle, Search, KeyRound, CheckCircle2, StickyNote } from "lucide-react";
+import { Plus, Phone, MessageCircle, Search, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/orders")({ component: OrdersPage });
 
-const STATUSES = ["new", "processing", "activated", "completed", "cancelled"] as const;
+const STATUSES = [
+  "new", "pending_audit", "audited_printed", "in_delivery",
+  "delivered", "completed", "returned", "cancelled",
+] as const;
 
 function statusTone(s: string) {
   switch (s) {
-    case "new": return "bg-primary/15 text-primary border-primary/30";
+    case "new":
+    case "pending_audit": return "bg-primary/15 text-primary border-primary/30";
+    case "audited_printed":
+    case "in_delivery":
     case "processing": return "bg-warning/20 text-warning-foreground border-warning/40";
+    case "delivered":
     case "activated":
     case "completed": return "bg-success/20 text-success border-success/40";
+    case "returned":
     case "cancelled": return "bg-destructive/15 text-destructive border-destructive/30";
     default: return "";
   }
 }
 
 function OrdersPage() {
-  const { t } = useI18n();
-  const { user, isManager, roles } = useAuth();
+  const { t, lang } = useI18n();
+  const { isManager, roles } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
@@ -55,44 +63,18 @@ function OrdersPage() {
 
   const filtered = (orders ?? []).filter((o: any) => {
     if (filter !== "all" && o.status !== filter) return false;
-    if (search && !`${o.customer_name} ${o.customer_phone} ${o.device_code ?? ""}`.toLowerCase().includes(search.toLowerCase())) return false;
+    const q = search.toLowerCase();
+    if (q && !`${o.order_number} ${o.customer_name} ${o.customer_phone} ${o.device_name ?? ""} ${o.address ?? ""}`.toLowerCase().includes(q)) return false;
     return true;
   });
 
   const canAdd = isManager || roles.includes("receptionist");
 
-  const updateStatus = async (orderId: string, status: typeof STATUSES[number], taskType?: "problem_resolved" | "code_activated", desc?: string) => {
-    const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
+  const updateStatus = async (orderId: string, status: string) => {
+    const { error } = await supabase.from("orders").update({ status: status as any }).eq("id", orderId);
     if (error) { toast.error(error.message); return; }
-    if (taskType && user) {
-      await supabase.from("tasks").insert({
-        order_id: orderId,
-        employee_id: user.id,
-        task_type: taskType,
-        description: desc,
-      });
-    }
     toast.success(t("saved"));
     qc.invalidateQueries({ queryKey: ["orders"] });
-    qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
-    qc.invalidateQueries({ queryKey: ["recent-tasks"] });
-    qc.invalidateQueries({ queryKey: ["my-stats"] });
-  };
-
-  const activateCode = async (orderId: string) => {
-    const code = window.prompt(t("deviceCode"));
-    if (!code) return;
-    const { error } = await supabase.from("orders").update({ device_code: code, status: "activated" }).eq("id", orderId);
-    if (error) { toast.error(error.message); return; }
-    if (user) {
-      await supabase.from("tasks").insert({
-        order_id: orderId, employee_id: user.id, task_type: "code_activated", description: code,
-      });
-    }
-    toast.success(t("saved"));
-    qc.invalidateQueries({ queryKey: ["orders"] });
-    qc.invalidateQueries({ queryKey: ["recent-tasks"] });
-    qc.invalidateQueries({ queryKey: ["my-stats"] });
     qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
   };
 
@@ -135,6 +117,7 @@ function OrdersPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="font-mono">#{o.order_number}</Badge>
                   <h3 className="font-semibold text-lg">{o.customer_name}</h3>
                   <Badge variant="outline" className={statusTone(o.status)}>{t(o.status as never)}</Badge>
                   {o.source === "whatsapp" && <Badge variant="secondary"><MessageCircle className="h-3 w-3 me-1" />{t("whatsapp")}</Badge>}
@@ -142,31 +125,21 @@ function OrdersPage() {
                 </div>
                 <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1">
                   <span dir="ltr">{o.customer_phone}</span>
+                  {o.device_name && <span>📦 {o.device_name}</span>}
+                  {o.price > 0 && <span className="font-semibold text-foreground">{Number(o.price).toLocaleString(lang === "ar" ? "ar" : "en")} </span>}
+                  {o.address && <span>📍 {o.address}</span>}
                   {o.device_code && <span><KeyRound className="inline h-3 w-3 me-1" />{o.device_code}</span>}
                 </div>
                 {o.notes && <p className="text-sm mt-2 text-foreground/80">{o.notes}</p>}
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {(roles.includes("support") || isManager) && o.status !== "completed" && (
-                  <Button size="sm" variant="outline" onClick={() => {
-                    const note = window.prompt(t("addNote")) ?? undefined;
-                    updateStatus(o.id, "processing", "problem_resolved", note);
-                  }}>
-                    <CheckCircle2 className="h-4 w-4 me-1" />{t("markProblemResolved")}
-                  </Button>
-                )}
-                {(roles.includes("activator") || isManager) && o.status !== "activated" && o.status !== "completed" && (
-                  <Button size="sm" onClick={() => activateCode(o.id)}>
-                    <KeyRound className="h-4 w-4 me-1" />{t("activateCode")}
-                  </Button>
-                )}
-                <Select value={o.status} onValueChange={(v) => updateStatus(o.id, v as typeof STATUSES[number])}>
-                  <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
+              {isManager && (
+                <Select value={o.status} onValueChange={(v) => updateStatus(o.id, v)}>
+                  <SelectTrigger className="w-[170px] h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(s as never)}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </div>
+              )}
             </div>
           </Card>
         ))}
@@ -181,7 +154,9 @@ function NewOrderDialog({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [product, setProduct] = useState("جهاز ستلايت");
+  const [deviceName, setDeviceName] = useState("جهاز ستلايت");
+  const [price, setPrice] = useState("");
+  const [address, setAddress] = useState("");
   const [source, setSource] = useState("call");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -194,9 +169,13 @@ function NewOrderDialog({ onClose }: { onClose: () => void }) {
       .insert({
         customer_name: name,
         customer_phone: phone,
-        product,
+        device_name: deviceName,
+        product: deviceName,
+        price: price ? Number(price) : 0,
+        address: address || null,
         source,
         notes: notes || null,
+        status: "pending_audit",
         created_by: user?.id,
       })
       .select()
@@ -210,20 +189,21 @@ function NewOrderDialog({ onClose }: { onClose: () => void }) {
     }
     toast.success(t("saved"));
     qc.invalidateQueries({ queryKey: ["orders"] });
+    qc.invalidateQueries({ queryKey: ["audit-orders"] });
     qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
-    qc.invalidateQueries({ queryKey: ["recent-tasks"] });
-    qc.invalidateQueries({ queryKey: ["my-stats"] });
     setBusy(false);
     onClose();
   };
 
   return (
-    <DialogContent>
+    <DialogContent className="max-h-[90vh] overflow-y-auto">
       <DialogHeader><DialogTitle>{t("addOrder")}</DialogTitle></DialogHeader>
       <form onSubmit={submit} className="space-y-3">
+        <div><Label>{t("deviceName")}</Label><Input required value={deviceName} onChange={(e) => setDeviceName(e.target.value)} /></div>
+        <div><Label>{t("price")}</Label><Input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
         <div><Label>{t("customerName")}</Label><Input required value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div><Label>{t("customerPhone")}</Label><Input required value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-        <div><Label>{t("product")}</Label><Input value={product} onChange={(e) => setProduct(e.target.value)} /></div>
+        <div><Label>{t("address")}</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} /></div>
         <div>
           <Label>{t("source")}</Label>
           <Select value={source} onValueChange={setSource}>

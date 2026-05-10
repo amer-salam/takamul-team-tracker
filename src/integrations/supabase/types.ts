@@ -14,47 +14,152 @@ export type Database = {
   }
   public: {
     Tables: {
+      deliveries: {
+        Row: {
+          company: string
+          created_at: string
+          delivery_date: string
+          employee_id: string
+          id: string
+          notes: string | null
+          orders_count: number
+          price_per_order: number
+          returned_count: number
+          total: number
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          delivery_date?: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          orders_count?: number
+          price_per_order?: number
+          returned_count?: number
+          total?: number
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          delivery_date?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          orders_count?: number
+          price_per_order?: number
+          returned_count?: number
+          total?: number
+        }
+        Relationships: []
+      }
+      issues: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_name: string
+          customer_phone: string | null
+          description: string | null
+          id: string
+          order_id: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
+          address: string | null
           assigned_activator: string | null
+          assigned_auditor: string | null
+          assigned_delivery: string | null
           assigned_support: string | null
           created_at: string
           created_by: string | null
           customer_name: string
           customer_phone: string
           device_code: string | null
+          device_name: string | null
           id: string
           notes: string | null
+          order_number: number | null
+          price: number | null
           product: string
           source: string | null
           status: Database["public"]["Enums"]["order_status"]
           updated_at: string
         }
         Insert: {
+          address?: string | null
           assigned_activator?: string | null
+          assigned_auditor?: string | null
+          assigned_delivery?: string | null
           assigned_support?: string | null
           created_at?: string
           created_by?: string | null
           customer_name: string
           customer_phone: string
           device_code?: string | null
+          device_name?: string | null
           id?: string
           notes?: string | null
+          order_number?: number | null
+          price?: number | null
           product?: string
           source?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
         }
         Update: {
+          address?: string | null
           assigned_activator?: string | null
+          assigned_auditor?: string | null
+          assigned_delivery?: string | null
           assigned_support?: string | null
           created_at?: string
           created_by?: string | null
           customer_name?: string
           customer_phone?: string
           device_code?: string | null
+          device_name?: string | null
           id?: string
           notes?: string | null
+          order_number?: number | null
+          price?: number | null
           product?: string
           source?: string | null
           status?: Database["public"]["Enums"]["order_status"]
@@ -153,18 +258,33 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "manager" | "receptionist" | "support" | "activator"
+      app_role:
+        | "manager"
+        | "receptionist"
+        | "support"
+        | "activator"
+        | "auditor"
+        | "delivery"
       order_status:
         | "new"
         | "processing"
         | "activated"
         | "completed"
         | "cancelled"
+        | "pending_audit"
+        | "audited_printed"
+        | "in_delivery"
+        | "delivered"
+        | "returned"
       task_type:
         | "order_received"
         | "problem_resolved"
         | "code_activated"
         | "note"
+        | "audit_done"
+        | "delivery_done"
+        | "issue_received"
+        | "issue_resolved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -292,19 +412,35 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["manager", "receptionist", "support", "activator"],
+      app_role: [
+        "manager",
+        "receptionist",
+        "support",
+        "activator",
+        "auditor",
+        "delivery",
+      ],
       order_status: [
         "new",
         "processing",
         "activated",
         "completed",
         "cancelled",
+        "pending_audit",
+        "audited_printed",
+        "in_delivery",
+        "delivered",
+        "returned",
       ],
       task_type: [
         "order_received",
         "problem_resolved",
         "code_activated",
         "note",
+        "audit_done",
+        "delivery_done",
+        "issue_received",
+        "issue_resolved",
       ],
     },
   },
