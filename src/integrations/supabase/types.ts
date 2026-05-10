@@ -153,18 +153,33 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "manager" | "receptionist" | "support" | "activator"
+      app_role:
+        | "manager"
+        | "receptionist"
+        | "support"
+        | "activator"
+        | "auditor"
+        | "delivery"
       order_status:
         | "new"
         | "processing"
         | "activated"
         | "completed"
         | "cancelled"
+        | "pending_audit"
+        | "audited_printed"
+        | "in_delivery"
+        | "delivered"
+        | "returned"
       task_type:
         | "order_received"
         | "problem_resolved"
         | "code_activated"
         | "note"
+        | "audit_done"
+        | "delivery_done"
+        | "issue_received"
+        | "issue_resolved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -292,19 +307,35 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["manager", "receptionist", "support", "activator"],
+      app_role: [
+        "manager",
+        "receptionist",
+        "support",
+        "activator",
+        "auditor",
+        "delivery",
+      ],
       order_status: [
         "new",
         "processing",
         "activated",
         "completed",
         "cancelled",
+        "pending_audit",
+        "audited_printed",
+        "in_delivery",
+        "delivered",
+        "returned",
       ],
       task_type: [
         "order_received",
         "problem_resolved",
         "code_activated",
         "note",
+        "audit_done",
+        "delivery_done",
+        "issue_received",
+        "issue_resolved",
       ],
     },
   },
