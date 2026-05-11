@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Package, Clock, CheckCircle2, Users, Plus, Activity, AlertCircle, RotateCcw, DollarSign } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
+import { fmtIQD, fmtNum } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({ component: Dashboard });
 
@@ -87,7 +88,7 @@ function Dashboard() {
   });
 
   const locale = lang === "ar" ? ar : enUS;
-  const fmt = (n: number) => n.toLocaleString(lang === "ar" ? "ar" : "en");
+  const fmt = (n: number) => fmtNum(n);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -104,7 +105,7 @@ function Dashboard() {
         <StatCard icon={Clock} label={t("inProgress")} value={fmt(stats?.inProgress ?? 0)} tone="oklch(0.6 0.18 250)" />
         <StatCard icon={CheckCircle2} label={t("completedOrders")} value={fmt(stats?.completed ?? 0)} tone="oklch(0.6 0.16 155)" />
         <StatCard icon={RotateCcw} label={t("returnedOrders")} value={fmt(stats?.returned ?? 0)} tone="oklch(0.6 0.22 25)" />
-        <StatCard icon={DollarSign} label={t("revenue")} value={fmt(stats?.revenue ?? 0)} tone="var(--gradient-gold)" />
+        <StatCard icon={DollarSign} label={t("revenue")} value={fmtIQD(stats?.revenue ?? 0, lang)} tone="var(--gradient-gold)" />
         <StatCard icon={AlertCircle} label={t("issuesCount")} value={fmt(stats?.issuesOpen ?? 0)} tone="oklch(0.65 0.2 30)" />
         <StatCard icon={Package} label={t("totalOrders")} value={fmt(stats?.total ?? 0)} tone="oklch(0.55 0.16 255)" />
         <StatCard icon={Activity} label={t("activityLog")} value={fmt(recent?.length ?? 0)} tone="oklch(0.5 0.05 270)" />
