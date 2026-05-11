@@ -4,11 +4,16 @@ import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useI18n } from "@/lib/i18n";
 import { useAuth, type AppRole } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Trash2, UserX } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/employees")({ component: EmployeesPage });
 
@@ -57,6 +62,12 @@ function EmployeesPage() {
     else { toast.success(t("saved")); qc.invalidateQueries({ queryKey: ["employees"] }); }
   };
 
+  const disableEmployee = async (userId: string) => {
+    const { error } = await supabase.from("user_roles").delete().eq("user_id", userId);
+    if (error) toast.error(error.message);
+    else { toast.success(t("employeeDeleted")); qc.invalidateQueries({ queryKey: ["employees"] }); }
+  };
+
   if (!isManager) return null;
 
   return (
@@ -96,6 +107,23 @@ function EmployeesPage() {
                     </SelectContent>
                   </Select>
                 )}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <UserX className="h-4 w-4 me-1" />{t("disableEmployee")}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{t("confirmDelete")}</AlertDialogTitle>
+                      <AlertDialogDescription>{t("confirmDeleteEmp")}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => disableEmployee(emp.id)}>{t("delete")}</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </Card>
           );
