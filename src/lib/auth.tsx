@@ -10,6 +10,7 @@ interface AuthCtx {
   loading: boolean;
   roles: AppRole[];
   isManager: boolean;
+  fullName: string | null;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string, phone: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -23,10 +24,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fullName, setFullName] = useState<string | null>(null);
 
   const fetchRoles = async (uid: string) => {
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
     setRoles((data ?? []).map((r) => r.role as AppRole));
+    const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", uid).maybeSingle();
+    setFullName(prof?.full_name ?? null);
   };
 
   useEffect(() => {
@@ -37,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTimeout(() => fetchRoles(sess.user.id), 0);
       } else {
         setRoles([]);
+        setFullName(null);
       }
     });
 
@@ -83,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         roles,
         isManager: roles.includes("manager"),
+        fullName,
         signIn,
         signUp,
         signOut,
