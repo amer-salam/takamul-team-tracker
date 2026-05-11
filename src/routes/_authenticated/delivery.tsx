@@ -23,9 +23,6 @@ function DeliveryPage() {
 
   useEffect(() => { if (!loading && !allowed) navigate({ to: "/dashboard" }); }, [loading, allowed, navigate]);
 
-  const [company, setCompany] = useState("");
-  const [count, setCount] = useState("");
-  const [pricePer, setPricePer] = useState("");
   const [returned, setReturned] = useState("");
 
   const { data: ready } = useQuery({
@@ -54,30 +51,23 @@ function DeliveryPage() {
     },
   });
 
-  const total = useMemo(() => {
-    const c = Number(count || 0); const p = Number(pricePer || 0); const r = Number(returned || 0);
-    return Math.max(0, (c - r) * p);
-  }, [count, pricePer, returned]);
-
   const submit = async () => {
-    if (!company || !count || !pricePer || !user) { toast.error(t("error")); return; }
+    if (!returned || !user) { toast.error(t("error")); return; }
     const { error } = await supabase.from("deliveries").insert({
       employee_id: user.id,
-      company,
-      orders_count: Number(count),
-      price_per_order: Number(pricePer),
-      returned_count: Number(returned || 0),
-      total,
+      company: "-",
+      orders_count: 0,
+      price_per_order: 0,
+      returned_count: Number(returned),
+      total: 0,
     });
     if (error) { toast.error(error.message); return; }
-    if (user) {
-      await supabase.from("tasks").insert({
-        employee_id: user.id, task_type: "delivery_done",
-        description: `${company} — ${count} × ${pricePer}`,
-      });
-    }
+    await supabase.from("tasks").insert({
+      employee_id: user.id, task_type: "delivery_done",
+      description: `returned: ${returned}`,
+    });
     toast.success(t("saved"));
-    setCompany(""); setCount(""); setPricePer(""); setReturned("");
+    setReturned("");
     qc.invalidateQueries({ queryKey: ["delivery-history"] });
     qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
   };
@@ -97,19 +87,20 @@ function DeliveryPage() {
     <div className="space-y-5 max-w-7xl mx-auto">
       <h1 className="text-2xl md:text-3xl font-bold">{t("delivery")}</h1>
 
-      <Card className="p-5">
-        <h2 className="font-semibold mb-4 flex items-center gap-2"><Truck className="h-5 w-5" />{t("todayDelivery")}</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div><Label>{t("deliveryCompany")}</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} /></div>
-          <div><Label>{t("ordersCount")}</Label><Input type="number" value={count} onChange={(e) => setCount(e.target.value)} /></div>
-          <div><Label>{t("pricePerOrder")}</Label><Input type="number" step="0.01" value={pricePer} onChange={(e) => setPricePer(e.target.value)} /></div>
-          <div><Label>{t("returnedCount")}</Label><Input type="number" value={returned} onChange={(e) => setReturned(e.target.value)} /></div>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="text-lg"><span className="text-muted-foreground">{t("total")}: </span><span className="font-bold">{total.toLocaleString(lang === "ar" ? "ar" : "en")}</span></div>
-          <Button onClick={submit}><CheckCircle2 className="h-4 w-4 me-1" />{t("submitDelivery")}</Button>
-        </div>
-      </Card>
+      {!isManager && (
+        <Card className="p-5">
+          <h2 className="font-semibold mb-4 flex items-center gap-2"><Truck className="h-5 w-5" />{t("todayDelivery")}</h2>
+          <div className="grid sm:grid-cols-2 gap-3 max-w-md">
+            <div>
+              <Label>{t("returnedCount")}</Label>
+              <Input type="number" value={returned} onChange={(e) => setReturned(e.target.value)} />
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button onClick={submit}><CheckCircle2 className="h-4 w-4 me-1" />{t("submitDelivery")}</Button>
+          </div>
+        </Card>
+      )}
 
       <Card className="p-5">
         <h2 className="font-semibold mb-3">{t("orders")} — {t("audited_printed")}</h2>
