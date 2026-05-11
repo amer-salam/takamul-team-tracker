@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthenticatedLayout() {
-  const { user, loading, roles, isManager } = useAuth();
+  const { user, loading, roles, isManager, fullName } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
 
@@ -26,6 +26,17 @@ function AuthenticatedLayout() {
     );
   }
 
+  const roleTitleMap: Record<string, string> = {
+    manager: t("managerTitle"),
+    receptionist: t("receptionistTitle"),
+    auditor: t("auditor"),
+    delivery: t("deliveryEmployee"),
+    support: t("supportTitle"),
+    activator: t("activatorTitle"),
+  };
+  const primaryRole = isManager ? "manager" : roles[0];
+  const roleTitle = primaryRole ? roleTitleMap[primaryRole] : null;
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -33,15 +44,14 @@ function AuthenticatedLayout() {
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-14 flex items-center border-b bg-card px-4 gap-2 sticky top-0 z-10">
             <SidebarTrigger />
+            <div className="flex flex-col leading-tight min-w-0">
+              <span className="text-sm font-semibold truncate">{fullName ?? user.email}</span>
+              {roleTitle && <span className="text-xs text-muted-foreground truncate">{roleTitle}</span>}
+            </div>
             <div className="flex-1" />
             {!isManager && roles.length === 0 && (
               <span className="text-xs px-3 py-1 rounded-full bg-warning/20 text-warning-foreground border border-warning/40">
                 {t("pendingRole")}
-              </span>
-            )}
-            {roles.length > 0 && (
-              <span className="text-xs px-3 py-1 rounded-full bg-secondary text-secondary-foreground">
-                {roles.map((r) => t(r as never)).join(" • ")}
               </span>
             )}
           </header>
