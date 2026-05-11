@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Printer, CheckCircle2, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { jsPDF } from "jspdf";
+import { fmtIQD } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/audit")({ component: AuditPage });
 
@@ -59,33 +59,64 @@ function AuditPage() {
   };
 
   const printReceipt = (o: any) => {
-    const doc = new jsPDF({ unit: "mm", format: "a5" });
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text("Rawan Crop", 105, 15, { align: "center" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(`Receipt / Order #${o.order_number}`, 105, 23, { align: "center" });
-    doc.line(15, 28, 195, 28);
-    let y = 36;
-    const rows: [string, string][] = [
-      ["Order #", String(o.order_number)],
-      ["Date", new Date(o.created_at).toLocaleString("en")],
-      ["Customer", o.customer_name],
-      ["Phone", o.customer_phone],
-      ["Address", o.address ?? "-"],
-      ["Device", o.device_name ?? o.product ?? "-"],
-      ["Price", String(o.price ?? 0)],
-      ["Notes", o.notes ?? "-"],
+    const isAr = lang === "ar";
+    const labels = isAr
+      ? { receipt: "وصل استلام", company: "روان كروب", orderNo: "رقم الطلب", date: "التاريخ", customer: "اسم الزبون", phone: "رقم الهاتف", address: "العنوان", device: "اسم الجهاز", price: "السعر", notes: "ملاحظات", thanks: "شكراً لتعاملكم معنا" }
+      : { receipt: "Receipt", company: "Rawan Crop", orderNo: "Order #", date: "Date", customer: "Customer", phone: "Phone", address: "Address", device: "Device", price: "Price", notes: "Notes", thanks: "Thank you for your business" };
+    const priceStr = fmtIQD(o.price ?? 0, lang);
+    const dateStr = new Date(o.created_at).toLocaleString(isAr ? "ar-IQ" : "en-US");
+    const rows = [
+      [labels.orderNo, `#${o.order_number}`],
+      [labels.date, dateStr],
+      [labels.customer, o.customer_name ?? "-"],
+      [labels.phone, o.customer_phone ?? "-"],
+      [labels.address, o.address ?? "-"],
+      [labels.device, o.device_name ?? o.product ?? "-"],
+      [labels.price, priceStr],
+      [labels.notes, o.notes ?? "-"],
     ];
-    rows.forEach(([k, v]) => {
-      doc.setFont("helvetica", "bold");
-      doc.text(`${k}:`, 20, y);
-      doc.setFont("helvetica", "normal");
-      doc.text(String(v), 55, y, { maxWidth: 130 });
-      y += 9;
-    });
-    doc.save(`order-${o.order_number}.pdf`);
+    const html = `<!DOCTYPE html>
+<html lang="${isAr ? "ar" : "en"}" dir="${isAr ? "rtl" : "ltr"}">
+<head>
+<meta charset="utf-8">
+<title>${labels.receipt} #${o.order_number}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 24px; color: #111; background: #fff; }
+  .receipt { max-width: 600px; margin: 0 auto; border: 2px solid #1e3a8a; border-radius: 12px; padding: 24px; }
+  .head { text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 12px; margin-bottom: 16px; }
+  .brand { font-size: 28px; font-weight: 700; color: #1e3a8a; }
+  .sub { font-size: 14px; color: #475569; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; font-size: 15px; vertical-align: top; }
+  td.k { font-weight: 600; color: #475569; width: 38%; white-space: nowrap; }
+  td.v { font-weight: 500; color: #0f172a; }
+  .foot { text-align: center; margin-top: 20px; padding-top: 12px; border-top: 2px dashed #cbd5e1; font-size: 13px; color: #64748b; }
+  @media print { body { padding: 0; } .receipt { border: none; } @page { margin: 12mm; } }
+</style>
+</head>
+<body>
+  <div class="receipt">
+    <div class="head">
+      <div class="brand">${labels.company}</div>
+      <div class="sub">${labels.receipt}</div>
+    </div>
+    <table>
+      ${rows.map(([k, v]) => `<tr><td class="k">${k}</td><td class="v">${String(v).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!))}</td></tr>`).join("")}
+    </table>
+    <div class="foot">${labels.thanks}</div>
+  </div>
+  <script>window.addEventListener('load', () => setTimeout(() => { window.print(); }, 400));</script>
+</body>
+</html>`;
+    const w = window.open("", "_blank", "width=720,height=900");
+    if (!w) { toast.error(t("error")); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
   };
 
   if (!allowed) return null;
@@ -156,7 +187,7 @@ function AuditCard({ order, onMark, onPrint, onSave }: any) {
           <div><span className="text-muted-foreground">{t("customerName")}:</span> {order.customer_name}</div>
           <div dir="ltr"><span className="text-muted-foreground">{t("customerPhone")}:</span> {order.customer_phone}</div>
           <div><span className="text-muted-foreground">{t("deviceName")}:</span> {order.device_name ?? "—"}</div>
-          <div><span className="text-muted-foreground">{t("price")}:</span> {Number(order.price ?? 0).toLocaleString(lang === "ar" ? "ar" : "en")}</div>
+          <div><span className="text-muted-foreground">{t("price")}:</span> {fmtIQD(order.price ?? 0, lang)}</div>
           <div className="sm:col-span-2"><span className="text-muted-foreground">{t("address")}:</span> {order.address ?? "—"}</div>
           {order.notes && <div className="sm:col-span-2"><span className="text-muted-foreground">{t("notes")}:</span> {order.notes}</div>}
         </div>
