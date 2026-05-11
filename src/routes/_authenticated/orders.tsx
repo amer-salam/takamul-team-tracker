@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Phone, MessageCircle, Search, KeyRound } from "lucide-react";
 import { toast } from "sonner";
+import { fmtIQD } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/orders")({ component: OrdersPage });
 
@@ -126,7 +127,7 @@ function OrdersPage() {
                 <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1">
                   <span dir="ltr">{o.customer_phone}</span>
                   {o.device_name && <span>📦 {o.device_name}</span>}
-                  {o.price > 0 && <span className="font-semibold text-foreground">{Number(o.price).toLocaleString(lang === "ar" ? "ar" : "en")} </span>}
+                  {Number(o.price) > 0 && <span className="font-semibold text-foreground">{fmtIQD(o.price, lang)}</span>}
                   {o.address && <span>📍 {o.address}</span>}
                   {o.device_code && <span><KeyRound className="inline h-3 w-3 me-1" />{o.device_code}</span>}
                 </div>
