@@ -97,7 +97,7 @@ function DeliveryPage() {
             </div>
           </div>
           <div className="mt-4 flex justify-end">
-            <Button onClick={submit}><CheckCircle2 className="h-4 w-4 me-1" />{t("done")}</Button>
+            <Button onClick={submit}><CheckCircle2 className="h-4 w-4 me-1" />{t("submitDelivery")}</Button>
           </div>
         </Card>
       )}
