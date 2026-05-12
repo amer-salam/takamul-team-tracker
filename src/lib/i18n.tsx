@@ -296,6 +296,10 @@ const dict = {
     getStarted: "Get started",
     heroTitle: "Rawan Crop Employee Operations",
     heroSub: "Track orders, device status, and employee performance in one place",
+    addImage: "Add image",
+    image: "Image",
+    imageOrder: "Image order",
+    viewImage: "View image",
   },
 } as const;
 
