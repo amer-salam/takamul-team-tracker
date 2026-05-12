@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Phone, MessageCircle, Search, KeyRound } from "lucide-react";
+import { Plus, Phone, MessageCircle, Search, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { fmtIQD } from "@/lib/format";
 
@@ -26,6 +26,7 @@ const STATUSES = [
   "new", "pending_audit", "audited_printed", "in_delivery",
   "delivered", "completed", "returned", "cancelled",
 ] as const;
+const RECEPTIONIST_FILTER = ["new"] as const;
 
 function statusTone(s: string) {
   switch (s) {
@@ -45,11 +46,13 @@ function statusTone(s: string) {
 
 function OrdersPage() {
   const { t, lang } = useI18n();
-  const { isManager, roles } = useAuth();
+  const { isManager, roles, user } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
+  const [imgOpen, setImgOpen] = useState(false);
+  const isReceptionistOnly = !isManager && roles.includes("receptionist");
 
   const { data: orders } = useQuery({
     queryKey: ["orders"],
@@ -84,12 +87,20 @@ function OrdersPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl md:text-3xl font-bold">{t("orders")}</h1>
         {canAdd && (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 me-1" />{t("addOrder")}</Button>
-            </DialogTrigger>
-            <NewOrderDialog onClose={() => setOpen(false)} />
-          </Dialog>
+          <div className="flex flex-wrap gap-2">
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 me-1" />{t("addOrder")}</Button>
+              </DialogTrigger>
+              <NewOrderDialog onClose={() => setOpen(false)} />
+            </Dialog>
+            <Dialog open={imgOpen} onOpenChange={setImgOpen}>
+              <DialogTrigger asChild>
+                <Button variant="secondary"><ImagePlus className="h-4 w-4 me-1" />{t("addImage")}</Button>
+              </DialogTrigger>
+              <NewImageDialog onClose={() => setImgOpen(false)} userId={user?.id} />
+            </Dialog>
+          </div>
         )}
       </div>
 
@@ -103,7 +114,9 @@ function OrdersPage() {
             <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("allStatuses")}</SelectItem>
-              {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(s as never)}</SelectItem>)}
+              {(isReceptionistOnly ? RECEPTIONIST_FILTER : STATUSES).map((s) => (
+                <SelectItem key={s} value={s}>{t(s as never)}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -129,8 +142,12 @@ function OrdersPage() {
                   {o.device_name && <span>📦 {o.device_name}</span>}
                   {Number(o.price) > 0 && <span className="font-semibold text-foreground">{fmtIQD(o.price, lang)}</span>}
                   {o.address && <span>📍 {o.address}</span>}
-                  {o.device_code && <span><KeyRound className="inline h-3 w-3 me-1" />{o.device_code}</span>}
                 </div>
+                {o.image_url && (
+                  <a href={o.image_url} target="_blank" rel="noreferrer" className="inline-block mt-2">
+                    <img src={o.image_url} alt="" className="h-24 w-24 object-cover rounded-lg border" />
+                  </a>
+                )}
                 {o.notes && <p className="text-sm mt-2 text-foreground/80">{o.notes}</p>}
               </div>
               {isManager && (
@@ -220,6 +237,78 @@ function NewOrderDialog({ onClose }: { onClose: () => void }) {
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>{t("cancel")}</Button>
           <Button type="submit" disabled={busy}>{t("save")}</Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  );
+}
+
+function NewImageDialog({ onClose, userId }: { onClose: () => void; userId?: string }) {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const [file, setFile] = useState<File | null>(null);
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file || !userId) return;
+    setBusy(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const up = await supabase.storage.from("order-images").upload(path, file, { contentType: file.type });
+    if (up.error) { toast.error(up.error.message); setBusy(false); return; }
+    const { data: pub } = supabase.storage.from("order-images").getPublicUrl(path);
+    const { data, error } = await supabase
+      .from("orders")
+      .insert({
+        customer_name: t("imageOrder"),
+        customer_phone: "-",
+        device_name: t("imageOrder"),
+        product: "image",
+        price: 0,
+        source: "image",
+        notes: notes || null,
+        status: "pending_audit",
+        image_url: pub.publicUrl,
+        is_image_order: true,
+        created_by: userId,
+      })
+      .select()
+      .single();
+    if (error) { toast.error(error.message); setBusy(false); return; }
+    if (data) {
+      await supabase.from("tasks").insert({
+        order_id: data.id, employee_id: userId, task_type: "order_received",
+        description: `image #${data.order_number}`,
+      });
+    }
+    toast.success(t("saved"));
+    qc.invalidateQueries({ queryKey: ["orders"] });
+    qc.invalidateQueries({ queryKey: ["audit-orders"] });
+    qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    setBusy(false);
+    onClose();
+  };
+
+  return (
+    <DialogContent>
+      <DialogHeader><DialogTitle>{t("addImage")}</DialogTitle></DialogHeader>
+      <form onSubmit={submit} className="space-y-3">
+        <div>
+          <Label>{t("image")}</Label>
+          <Input
+            type="file"
+            accept="image/jpeg,image/png,image/jpg"
+            capture="environment"
+            required
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          />
+        </div>
+        <div><Label>{t("notes")}</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>{t("cancel")}</Button>
+          <Button type="submit" disabled={busy || !file}>{t("save")}</Button>
         </DialogFooter>
       </form>
     </DialogContent>
