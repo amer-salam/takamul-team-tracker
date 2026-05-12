@@ -17,7 +17,7 @@ import { Trash2, UserX } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/employees")({ component: EmployeesPage });
 
-const ROLES: AppRole[] = ["manager", "receptionist", "auditor", "delivery", "support", "activator"];
+const ROLES: AppRole[] = ["manager", "receptionist", "auditor", "delivery"];
 
 function EmployeesPage() {
   const { t } = useI18n();
@@ -42,8 +42,8 @@ function EmployeesPage() {
           roles: userRoles,
           stats: {
             ordersReceived: userTasks.filter((tk) => tk.task_type === "order_received").length,
-            problemsResolved: userTasks.filter((tk) => tk.task_type === "problem_resolved").length,
-            codesActivated: userTasks.filter((tk) => tk.task_type === "code_activated").length,
+            auditsDone: userTasks.filter((tk) => tk.task_type === "audit_done").length,
+            deliveriesDone: userTasks.filter((tk) => tk.task_type === "delivery_done").length,
           },
         };
       });
@@ -96,8 +96,8 @@ function EmployeesPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <Stat label={t("ordersReceived")} v={emp.stats.ordersReceived} />
-                  <Stat label={t("problemsResolved")} v={emp.stats.problemsResolved} />
-                  <Stat label={t("codesActivated")} v={emp.stats.codesActivated} />
+                  <Stat label={t("audit_done")} v={emp.stats.auditsDone} />
+                  <Stat label={t("delivery_done")} v={emp.stats.deliveriesDone} />
                 </div>
                 {available.length > 0 && (
                   <Select onValueChange={(v) => addRole(emp.id, v as AppRole)}>
