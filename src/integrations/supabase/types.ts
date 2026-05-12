@@ -53,54 +53,6 @@ export type Database = {
         }
         Relationships: []
       }
-      issues: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          customer_name: string
-          customer_phone: string | null
-          description: string | null
-          id: string
-          order_id: string | null
-          resolution_notes: string | null
-          resolved_at: string | null
-          resolved_by: string | null
-          status: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          customer_name: string
-          customer_phone?: string | null
-          description?: string | null
-          id?: string
-          order_id?: string | null
-          resolution_notes?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          status?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          customer_name?: string
-          customer_phone?: string | null
-          description?: string | null
-          id?: string
-          order_id?: string | null
-          resolution_notes?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          status?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       orders: {
         Row: {
           address: string | null
@@ -115,6 +67,8 @@ export type Database = {
           device_code: string | null
           device_name: string | null
           id: string
+          image_url: string | null
+          is_image_order: boolean
           notes: string | null
           order_number: number | null
           price: number | null
@@ -136,6 +90,8 @@ export type Database = {
           device_code?: string | null
           device_name?: string | null
           id?: string
+          image_url?: string | null
+          is_image_order?: boolean
           notes?: string | null
           order_number?: number | null
           price?: number | null
@@ -157,6 +113,8 @@ export type Database = {
           device_code?: string | null
           device_name?: string | null
           id?: string
+          image_url?: string | null
+          is_image_order?: boolean
           notes?: string | null
           order_number?: number | null
           price?: number | null

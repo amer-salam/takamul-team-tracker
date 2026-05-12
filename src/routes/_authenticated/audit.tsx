@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Printer, CheckCircle2, Pencil } from "lucide-react";
+import { Printer, CheckCircle2, Pencil, Truck, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { fmtIQD } from "@/lib/format";
 
@@ -55,6 +55,16 @@ function AuditPage() {
     toast.success(t("saved"));
     qc.invalidateQueries({ queryKey: ["audit-orders"] });
     qc.invalidateQueries({ queryKey: ["orders"] });
+    qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+  };
+
+  const sendToDelivery = async (o: any) => {
+    const ok = await updateOrder(o.id, { status: "in_delivery", assigned_auditor: user?.id });
+    if (!ok) return;
+    toast.success(t("saved"));
+    qc.invalidateQueries({ queryKey: ["audit-orders"] });
+    qc.invalidateQueries({ queryKey: ["orders"] });
+    qc.invalidateQueries({ queryKey: ["delivery-all-orders"] });
     qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
   };
 
@@ -129,7 +139,7 @@ function AuditPage() {
           <Card className="p-10 text-center text-muted-foreground">{t("noData")}</Card>
         )}
         {(orders ?? []).map((o: any) => (
-          <AuditCard key={o.id} order={o} onMark={markAudited} onPrint={printReceipt} onSave={async (patch: any) => {
+          <AuditCard key={o.id} order={o} onMark={markAudited} onPrint={printReceipt} onSendDelivery={sendToDelivery} onSave={async (patch: any) => {
             const ok = await updateOrder(o.id, patch);
             if (ok) { toast.success(t("saved")); qc.invalidateQueries({ queryKey: ["audit-orders"] }); }
           }} />
@@ -139,7 +149,7 @@ function AuditPage() {
   );
 }
 
-function AuditCard({ order, onMark, onPrint, onSave }: any) {
+function AuditCard({ order, onMark, onPrint, onSendDelivery, onSave }: any) {
   const { t, lang } = useI18n();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -165,11 +175,20 @@ function AuditCard({ order, onMark, onPrint, onSave }: any) {
           <Button size="sm" variant="outline" onClick={() => onPrint(order)}>
             <Printer className="h-4 w-4 me-1" />{t("print")}
           </Button>
-          <Button size="sm" onClick={() => onMark(order)}>
+          <Button size="sm" variant="outline" onClick={() => onMark(order)}>
             <CheckCircle2 className="h-4 w-4 me-1" />{t("markAudited")}
+          </Button>
+          <Button size="sm" onClick={() => onSendDelivery(order)}>
+            <Truck className="h-4 w-4 me-1" />{t("markInDelivery")}
           </Button>
         </div>
       </div>
+      {order.image_url && (
+        <a href={order.image_url} target="_blank" rel="noreferrer" className="inline-block mb-3">
+          <img src={order.image_url} alt="" className="max-h-64 rounded-lg border object-contain" />
+          <span className="text-xs text-muted-foreground inline-flex items-center gap-1 mt-1"><ImageIcon className="h-3 w-3" />{t("viewImage")}</span>
+        </a>
+      )}
       {editing ? (
         <div className="grid sm:grid-cols-2 gap-3">
           {(["customer_name", "customer_phone", "device_name", "address"] as const).map((k) => (
