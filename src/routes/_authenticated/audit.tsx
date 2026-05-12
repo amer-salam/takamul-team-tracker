@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,10 +22,11 @@ function AuditPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const allowed = isManager || roles.includes("auditor");
+  const [statusFilter, setStatusFilter] = useState<"all" | "new">("all");
 
   useEffect(() => { if (!loading && !allowed) navigate({ to: "/dashboard" }); }, [loading, allowed, navigate]);
 
-  const { data: orders } = useQuery({
+  const { data: ordersAll } = useQuery({
     queryKey: ["audit-orders"],
     enabled: allowed,
     queryFn: async () => {
@@ -36,6 +38,7 @@ function AuditPage() {
       return data ?? [];
     },
   });
+  const orders = (ordersAll ?? []).filter((o: any) => statusFilter === "all" ? true : o.status === "new");
 
   const updateOrder = async (id: string, patch: any) => {
     const { error } = await supabase.from("orders").update(patch).eq("id", id);
@@ -133,12 +136,21 @@ function AuditPage() {
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
-      <h1 className="text-2xl md:text-3xl font-bold">{t("audit")}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl md:text-3xl font-bold">{t("audit")}</h1>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "new")}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("all")}</SelectItem>
+            <SelectItem value="new">{t("new")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <div className="grid gap-3">
-        {(orders ?? []).length === 0 && (
+        {orders.length === 0 && (
           <Card className="p-10 text-center text-muted-foreground">{t("noData")}</Card>
         )}
-        {(orders ?? []).map((o: any) => (
+        {orders.map((o: any) => (
           <AuditCard key={o.id} order={o} onMark={markAudited} onPrint={printReceipt} onSendDelivery={sendToDelivery} onSave={async (patch: any) => {
             const ok = await updateOrder(o.id, patch);
             if (ok) { toast.success(t("saved")); qc.invalidateQueries({ queryKey: ["audit-orders"] }); }
