@@ -101,7 +101,6 @@ function DeliveryPage() {
                 <Badge className="text-xs">{t(o.status as never)}</Badge>
               </div>
               <div className="flex gap-2 flex-wrap">
-                {o.status === "audited_printed" && <Button size="sm" variant="outline" onClick={() => setOrderStatus(o.id, "in_delivery")}>{t("markInDelivery")}</Button>}
                 <Button size="sm" onClick={() => setOrderStatus(o.id, "delivered")}>{t("markDelivered")}</Button>
                 <Button size="sm" variant="destructive" onClick={() => setOrderStatus(o.id, "returned")}>{t("markReturned")}</Button>
               </div>
