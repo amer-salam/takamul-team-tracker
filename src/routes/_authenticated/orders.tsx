@@ -300,7 +300,6 @@ function NewImageDialog({ onClose, userId }: { onClose: () => void; userId?: str
           <Input
             type="file"
             accept="image/jpeg,image/png,image/jpg"
-            capture="environment"
             required
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
