@@ -141,7 +141,7 @@ function AuditPage() {
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "new")}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t("all")}</SelectItem>
+            <SelectItem value="all">{t("allStatuses")}</SelectItem>
             <SelectItem value="new">{t("new")}</SelectItem>
           </SelectContent>
         </Select>
