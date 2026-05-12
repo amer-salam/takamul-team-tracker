@@ -147,6 +147,10 @@ const dict = {
     getStarted: "ابدأ الآن",
     heroTitle: "نظام متابعة موظفي روان كروب",
     heroSub: "تابع طلبات الزبائن، حالة الأجهزة، وأداء كل موظف من مكان واحد",
+    addImage: "إضافة صورة",
+    image: "الصورة",
+    imageOrder: "طلب صورة",
+    viewImage: "مشاهدة الصورة",
   },
   en: {
     appName: "Rawan Crop",
