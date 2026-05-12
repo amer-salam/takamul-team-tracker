@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Clock, CheckCircle2, Users, Plus, Activity, AlertCircle, RotateCcw, DollarSign } from "lucide-react";
+import { Package, Clock, CheckCircle2, Users, Plus, Activity, RotateCcw, DollarSign } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 import { fmtIQD, fmtNum } from "@/lib/format";
@@ -36,9 +36,8 @@ function Dashboard() {
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
-      const [{ data: orders }, { data: issues }, { data: todayOrders }] = await Promise.all([
+      const [{ data: orders }, { data: todayOrders }] = await Promise.all([
         supabase.from("orders").select("status, price"),
-        supabase.from("issues").select("status"),
         supabase.from("orders").select("id, price, status").gte("created_at", todayStart.toISOString()),
       ]);
       const list = orders ?? [];
@@ -48,7 +47,6 @@ function Dashboard() {
       const revenue = list
         .filter((o) => ["delivered","completed","activated"].includes(o.status as string))
         .reduce((s, o: any) => s + Number(o.price ?? 0), 0);
-      const issuesOpen = (issues ?? []).filter((i) => i.status === "open").length;
       return {
         total: list.length,
         inProgress,
@@ -56,7 +54,6 @@ function Dashboard() {
         returned,
         revenue,
         todayCount: (todayOrders ?? []).length,
-        issuesOpen,
       };
     },
   });
@@ -81,8 +78,8 @@ function Dashboard() {
       const list = data ?? [];
       return {
         ordersReceived: list.filter((x) => x.task_type === "order_received").length,
-        problemsResolved: list.filter((x) => x.task_type === "problem_resolved" || x.task_type === "issue_resolved").length,
-        codesActivated: list.filter((x) => x.task_type === "code_activated").length,
+        auditsDone: list.filter((x) => x.task_type === "audit_done").length,
+        deliveriesDone: list.filter((x) => x.task_type === "delivery_done").length,
       };
     },
   });
@@ -106,7 +103,6 @@ function Dashboard() {
         <StatCard icon={CheckCircle2} label={t("completedOrders")} value={fmt(stats?.completed ?? 0)} tone="oklch(0.6 0.16 155)" />
         <StatCard icon={RotateCcw} label={t("returnedOrders")} value={fmt(stats?.returned ?? 0)} tone="oklch(0.6 0.22 25)" />
         <StatCard icon={DollarSign} label={t("revenue")} value={fmtIQD(stats?.revenue ?? 0, lang)} tone="var(--gradient-gold)" />
-        <StatCard icon={AlertCircle} label={t("issuesCount")} value={fmt(stats?.issuesOpen ?? 0)} tone="oklch(0.65 0.2 30)" />
         <StatCard icon={Package} label={t("totalOrders")} value={fmt(stats?.total ?? 0)} tone="oklch(0.55 0.16 255)" />
         <StatCard icon={Activity} label={t("activityLog")} value={fmt(recent?.length ?? 0)} tone="oklch(0.5 0.05 270)" />
       </div>
@@ -142,8 +138,8 @@ function Dashboard() {
           {isManager ? <ManagerEmpBlock /> : (
             <div className="space-y-3">
               <Row label={t("ordersReceived")} value={myStats?.ordersReceived ?? 0} />
-              <Row label={t("problemsResolved")} value={myStats?.problemsResolved ?? 0} />
-              <Row label={t("codesActivated")} value={myStats?.codesActivated ?? 0} />
+              <Row label={t("audit_done")} value={myStats?.auditsDone ?? 0} />
+              <Row label={t("delivery_done")} value={myStats?.deliveriesDone ?? 0} />
             </div>
           )}
         </Card>
