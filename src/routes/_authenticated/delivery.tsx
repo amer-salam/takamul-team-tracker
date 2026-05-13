@@ -132,3 +132,162 @@ function StatCard({ icon: Icon, label, value, tone }: { icon: any; label: string
     </Card>
   );
 }
+
+type DateRangeKey = "today" | "yesterday" | "dayBeforeYesterday" | "thisWeek" | "custom";
+
+function getRange(key: DateRangeKey, custom?: string): { from: Date; to: Date } {
+  const now = new Date();
+  const startOf = (d: Date) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+  const endOf = (d: Date) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
+  if (key === "today") return { from: startOf(now), to: endOf(now) };
+  if (key === "yesterday") {
+    const d = new Date(now); d.setDate(d.getDate() - 1);
+    return { from: startOf(d), to: endOf(d) };
+  }
+  if (key === "dayBeforeYesterday") {
+    const d = new Date(now); d.setDate(d.getDate() - 2);
+    return { from: startOf(d), to: endOf(d) };
+  }
+  if (key === "thisWeek") {
+    const d = new Date(now);
+    const day = d.getDay(); // 0 = Sunday
+    d.setDate(d.getDate() - day);
+    return { from: startOf(d), to: endOf(now) };
+  }
+  // custom
+  const c = custom ? new Date(custom) : now;
+  return { from: startOf(c), to: endOf(c) };
+}
+
+function ManagerDeliveryView() {
+  const { t, lang } = useI18n();
+  const [rangeKey, setRangeKey] = useState<DateRangeKey>("today");
+  const [customDate, setCustomDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  const range = useMemo(() => getRange(rangeKey, customDate), [rangeKey, customDate]);
+
+  const { data: orders } = useQuery({
+    queryKey: ["mgr-delivery-orders", range.from.toISOString(), range.to.toISOString()],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("orders")
+        .select("id, device_name, price, status, created_at")
+        .gte("created_at", range.from.toISOString())
+        .lte("created_at", range.to.toISOString());
+      return data ?? [];
+    },
+  });
+
+  const { devices, totals } = useMemo(() => {
+    const list = orders ?? [];
+    const map = new Map<string, { name: string; count: number; price: number; total: number }>();
+    let devicesSum = 0;
+    let returnsSum = 0;
+    for (const o of list as any[]) {
+      const name = (o.device_name || "—").trim();
+      const price = Number(o.price ?? 0);
+      if (o.status === "returned") {
+        returnsSum += price;
+        continue;
+      }
+      devicesSum += price;
+      const cur = map.get(name) ?? { name, count: 0, price, total: 0 };
+      cur.count += 1;
+      cur.total += price;
+      cur.price = price; // last seen unit price
+      map.set(name, cur);
+    }
+    return {
+      devices: Array.from(map.values()).sort((a, b) => b.total - a.total),
+      totals: { devicesSum, returnsSum, net: devicesSum - returnsSum },
+    };
+  }, [orders]);
+
+  const ranges: { key: DateRangeKey; label: string }[] = [
+    { key: "today", label: t("today") },
+    { key: "yesterday", label: t("yesterday") },
+    { key: "dayBeforeYesterday", label: t("dayBeforeYesterday") },
+    { key: "thisWeek", label: t("thisWeek") },
+    { key: "custom", label: t("customDate") },
+  ];
+
+  return (
+    <div className="space-y-5 max-w-7xl mx-auto">
+      <h1 className="text-2xl md:text-3xl font-bold">{t("delivery")}</h1>
+
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 font-semibold">
+            <CalendarDays className="h-5 w-5" />{t("dateFilter")}
+          </div>
+          <ToggleGroup
+            type="single"
+            value={rangeKey}
+            onValueChange={(v) => v && setRangeKey(v as DateRangeKey)}
+            className="flex-wrap"
+          >
+            {ranges.map((r) => (
+              <ToggleGroupItem key={r.key} value={r.key} className="text-sm">
+                {r.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          {rangeKey === "custom" && (
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">{t("customDate")}</Label>
+              <Input
+                type="date"
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                className="w-[160px]"
+              />
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="font-semibold mb-3 flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />{t("deviceStats")}
+        </h2>
+        {devices.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">{t("noData")}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("deviceName")}</TableHead>
+                  <TableHead>{t("deviceCount")}</TableHead>
+                  <TableHead>{t("devicePrice")}</TableHead>
+                  <TableHead>{t("deviceTotal")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {devices.map((d, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{d.name}</TableCell>
+                    <TableCell>{fmtNum(d.count)}</TableCell>
+                    <TableCell>{fmtIQD(d.price, lang)}</TableCell>
+                    <TableCell className="font-semibold">{fmtIQD(d.total, lang)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Card>
+
+      <div>
+        <h2 className="font-semibold mb-3 flex items-center gap-2">
+          <Wallet className="h-5 w-5" />{t("grandTotal")}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <StatCard icon={DollarSign} label={t("devicesSum")} value={fmtIQD(totals.devicesSum, lang)} tone="oklch(0.55 0.16 255)" />
+          <StatCard icon={RotateCcw} label={t("returnsSum")} value={fmtIQD(totals.returnsSum, lang)} tone="oklch(0.6 0.22 25)" />
+          <StatCard icon={Wallet} label={t("netTotal")} value={fmtIQD(totals.net, lang)} tone="var(--gradient-gold)" />
+        </div>
+      </div>
+    </div>
+  );
+}
