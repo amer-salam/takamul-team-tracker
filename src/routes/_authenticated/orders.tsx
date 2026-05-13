@@ -16,11 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Phone, MessageCircle, Search, ImagePlus } from "lucide-react";
+import { Plus, Phone, MessageCircle, Search, ImagePlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { fmtIQD } from "@/lib/format";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/orders")({ component: OrdersPage });
 
