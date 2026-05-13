@@ -1,13 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Truck, CheckCircle2, RotateCcw, DollarSign, Package, Wallet } from "lucide-react";
+import { Truck, RotateCcw, DollarSign, Package, Wallet, CalendarDays, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { fmtIQD, fmtNum } from "@/lib/format";
 
@@ -21,6 +25,9 @@ function DeliveryPage() {
   const allowed = isManager || roles.includes("delivery");
 
   useEffect(() => { if (!loading && !allowed) navigate({ to: "/dashboard" }); }, [loading, allowed, navigate]);
+
+  if (!allowed) return null;
+  if (isManager) return <ManagerDeliveryView />;
 
   const { data: allOrders } = useQuery({
     queryKey: ["delivery-all-orders"],
@@ -68,8 +75,6 @@ function DeliveryPage() {
     qc.invalidateQueries({ queryKey: ["orders"] });
     qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
   };
-
-  if (!allowed) return null;
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
