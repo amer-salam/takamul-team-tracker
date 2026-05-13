@@ -19,6 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Phone, MessageCircle, Search, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { fmtIQD } from "@/lib/format";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Users } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/orders")({ component: OrdersPage });
 
