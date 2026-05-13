@@ -72,7 +72,8 @@ function OrdersPage() {
     return true;
   });
 
-  const canAdd = isManager || roles.includes("receptionist");
+  // Manager should NOT see add buttons in the orders panel
+  const canAdd = !isManager && roles.includes("receptionist");
 
   const updateStatus = async (orderId: string, status: string) => {
     const { error } = await supabase.from("orders").update({ status: status as any }).eq("id", orderId);
@@ -103,6 +104,8 @@ function OrdersPage() {
           </div>
         )}
       </div>
+
+      {isManager && <EmployeeStatsCard />}
 
       <Card className="p-4">
         <div className="flex flex-wrap items-center gap-2">
