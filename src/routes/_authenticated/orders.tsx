@@ -318,3 +318,62 @@ function NewImageDialog({ onClose, userId }: { onClose: () => void; userId?: str
     </DialogContent>
   );
 }
+
+function EmployeeStatsCard() {
+  const { t, lang } = useI18n();
+  const { data } = useQuery({
+    queryKey: ["employee-order-stats"],
+    queryFn: async () => {
+      const [{ data: orders }, { data: profiles }] = await Promise.all([
+        supabase.from("orders").select("created_by, device_name, price, is_image_order"),
+        supabase.from("profiles").select("id, full_name"),
+      ]);
+      const nameMap = new Map((profiles ?? []).map((p: any) => [p.id, p.full_name]));
+      const map = new Map<string, { name: string; orders: number; devices: number; total: number }>();
+      for (const o of orders ?? []) {
+        const id = (o as any).created_by;
+        if (!id) continue;
+        const cur = map.get(id) ?? { name: nameMap.get(id) ?? "—", orders: 0, devices: 0, total: 0 };
+        cur.orders += 1;
+        if ((o as any).device_name && !(o as any).is_image_order) cur.devices += 1;
+        cur.total += Number((o as any).price ?? 0);
+        map.set(id, cur);
+      }
+      return Array.from(map.values()).sort((a, b) => b.orders - a.orders);
+    },
+  });
+
+  return (
+    <Card className="p-5">
+      <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+        <Users className="h-5 w-5" />{t("employeeStats")}
+      </h2>
+      {!data || data.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-6 text-center">{t("noData")}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("employeeName")}</TableHead>
+                <TableHead>{t("ordersReceivedCount")}</TableHead>
+                <TableHead>{t("devicesEnteredCount")}</TableHead>
+                <TableHead>{t("ordersPriceSum")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map((r, i) => (
+                <TableRow key={i}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell>{r.orders}</TableCell>
+                  <TableCell>{r.devices}</TableCell>
+                  <TableCell className="font-semibold">{fmtIQD(r.total, lang)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </Card>
+  );
+}
