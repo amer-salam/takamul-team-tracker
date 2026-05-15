@@ -346,6 +346,16 @@ const dict = {
     ordersReceivedCount: "Orders received",
     devicesEnteredCount: "Devices entered",
     ordersPriceSum: "Orders total price",
+    viewEmployeeDetails: "View employee details",
+    employeeOrders: "Employee orders",
+    devicesBreakdown: "Devices breakdown",
+    searchByDevice: "Search by device name",
+    allDates: "All dates",
+    selectDate: "Select date",
+    customer: "Customer",
+    image_: "Image",
+    showingFor: "Showing for",
+    backToList: "Back to list",
   },
 } as const;
 
