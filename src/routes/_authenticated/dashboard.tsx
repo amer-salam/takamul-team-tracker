@@ -31,6 +31,7 @@ function StatCard({ icon: Icon, label, value, tone }: { icon: any; label: string
 function Dashboard() {
   const { t, lang } = useI18n();
   const { isManager, user } = useAuth();
+  if (!isManager) return <EmployeeDashboard />;
   const todayStart = new Date(); todayStart.setHours(0,0,0,0);
 
   const { data: stats } = useQuery({
@@ -143,6 +144,49 @@ function Dashboard() {
             </div>
           )}
         </Card>
+      </div>
+    </div>
+  );
+}
+
+function EmployeeDashboard() {
+  const { t } = useI18n();
+  const { user } = useAuth();
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+
+  const { data: stats } = useQuery({
+    queryKey: ["my-dashboard-stats", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("orders")
+        .select("status, created_at")
+        .eq("created_by", user!.id);
+      const list = data ?? [];
+      const today = list.filter((o: any) => new Date(o.created_at) >= todayStart).length;
+      const inProgress = list.filter((o: any) =>
+        ["new","pending_audit","audited_printed","in_delivery","processing"].includes(o.status as string)
+      ).length;
+      const completed = list.filter((o: any) =>
+        ["delivered","completed","activated"].includes(o.status as string)
+      ).length;
+      return { today, inProgress, completed };
+    },
+  });
+
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">{t("dashboard")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("tagline")}</p>
+        </div>
+        <Link to="/orders"><Button><Plus className="h-4 w-4 me-1" />{t("addOrder")}</Button></Link>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatCard icon={Package} label={t("todaysOrders")} value={fmtNum(stats?.today ?? 0)} tone="var(--gradient-hero)" />
+        <StatCard icon={Clock} label={t("inProgress")} value={fmtNum(stats?.inProgress ?? 0)} tone="oklch(0.6 0.18 250)" />
+        <StatCard icon={CheckCircle2} label={t("completedOrders")} value={fmtNum(stats?.completed ?? 0)} tone="oklch(0.6 0.16 155)" />
       </div>
     </div>
   );
