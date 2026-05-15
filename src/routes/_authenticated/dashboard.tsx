@@ -75,20 +75,6 @@ function ManagerDashboard() {
     },
   });
 
-  const { data: myStats } = useQuery({
-    queryKey: ["my-stats", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.from("tasks").select("task_type").eq("employee_id", user!.id);
-      const list = data ?? [];
-      return {
-        ordersReceived: list.filter((x) => x.task_type === "order_received").length,
-        auditsDone: list.filter((x) => x.task_type === "audit_done").length,
-        deliveriesDone: list.filter((x) => x.task_type === "delivery_done").length,
-      };
-    },
-  });
-
   const locale = lang === "ar" ? ar : enUS;
   const fmt = (n: number) => fmtNum(n);
 
