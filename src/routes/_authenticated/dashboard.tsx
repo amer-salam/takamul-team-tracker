@@ -29,8 +29,12 @@ function StatCard({ icon: Icon, label, value, tone }: { icon: any; label: string
 }
 
 function Dashboard() {
+  const { isManager } = useAuth();
+  return isManager ? <ManagerDashboard /> : <EmployeeDashboard />;
+}
+
+function ManagerDashboard() {
   const { t, lang } = useI18n();
-  const { isManager, user } = useAuth();
   const todayStart = new Date(); todayStart.setHours(0,0,0,0);
 
   const { data: stats } = useQuery({
@@ -67,20 +71,6 @@ function Dashboard() {
         .order("created_at", { ascending: false })
         .limit(8);
       return data ?? [];
-    },
-  });
-
-  const { data: myStats } = useQuery({
-    queryKey: ["my-stats", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.from("tasks").select("task_type").eq("employee_id", user!.id);
-      const list = data ?? [];
-      return {
-        ordersReceived: list.filter((x) => x.task_type === "order_received").length,
-        auditsDone: list.filter((x) => x.task_type === "audit_done").length,
-        deliveriesDone: list.filter((x) => x.task_type === "delivery_done").length,
-      };
     },
   });
 
@@ -134,15 +124,52 @@ function Dashboard() {
         </Card>
 
         <Card className="p-5">
-          <h2 className="font-semibold text-lg mb-4">{isManager ? t("activeEmployees") : t("tasksHandled")}</h2>
-          {isManager ? <ManagerEmpBlock /> : (
-            <div className="space-y-3">
-              <Row label={t("ordersReceived")} value={myStats?.ordersReceived ?? 0} />
-              <Row label={t("audit_done")} value={myStats?.auditsDone ?? 0} />
-              <Row label={t("delivery_done")} value={myStats?.deliveriesDone ?? 0} />
-            </div>
-          )}
+          <h2 className="font-semibold text-lg mb-4">{t("activeEmployees")}</h2>
+          <ManagerEmpBlock />
         </Card>
+      </div>
+    </div>
+  );
+}
+
+function EmployeeDashboard() {
+  const { t } = useI18n();
+  const { user } = useAuth();
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+
+  const { data: stats } = useQuery({
+    queryKey: ["my-dashboard-stats", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("orders")
+        .select("status, created_at")
+        .eq("created_by", user!.id);
+      const list = data ?? [];
+      const today = list.filter((o: any) => new Date(o.created_at) >= todayStart).length;
+      const inProgress = list.filter((o: any) =>
+        ["new","pending_audit","audited_printed","in_delivery","processing"].includes(o.status as string)
+      ).length;
+      const completed = list.filter((o: any) =>
+        ["delivered","completed","activated"].includes(o.status as string)
+      ).length;
+      return { today, inProgress, completed };
+    },
+  });
+
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">{t("dashboard")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("tagline")}</p>
+        </div>
+        <Link to="/orders"><Button><Plus className="h-4 w-4 me-1" />{t("addOrder")}</Button></Link>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatCard icon={Package} label={t("todaysOrders")} value={fmtNum(stats?.today ?? 0)} tone="var(--gradient-hero)" />
+        <StatCard icon={Clock} label={t("inProgress")} value={fmtNum(stats?.inProgress ?? 0)} tone="oklch(0.6 0.18 250)" />
+        <StatCard icon={CheckCircle2} label={t("completedOrders")} value={fmtNum(stats?.completed ?? 0)} tone="oklch(0.6 0.16 155)" />
       </div>
     </div>
   );
@@ -166,11 +193,3 @@ function ManagerEmpBlock() {
   );
 }
 
-function Row({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-center justify-between py-2 border-b last:border-0">
-      <span className="text-sm">{label}</span>
-      <span className="text-2xl font-bold">{value}</span>
-    </div>
-  );
-}
