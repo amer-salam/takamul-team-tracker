@@ -29,9 +29,13 @@ function StatCard({ icon: Icon, label, value, tone }: { icon: any; label: string
 }
 
 function Dashboard() {
+  const { isManager } = useAuth();
+  return isManager ? <ManagerDashboard /> : <EmployeeDashboard />;
+}
+
+function ManagerDashboard() {
   const { t, lang } = useI18n();
-  const { isManager, user } = useAuth();
-  if (!isManager) return <EmployeeDashboard />;
+  const { user } = useAuth();
   const todayStart = new Date(); todayStart.setHours(0,0,0,0);
 
   const { data: stats } = useQuery({
@@ -135,14 +139,8 @@ function Dashboard() {
         </Card>
 
         <Card className="p-5">
-          <h2 className="font-semibold text-lg mb-4">{isManager ? t("activeEmployees") : t("tasksHandled")}</h2>
-          {isManager ? <ManagerEmpBlock /> : (
-            <div className="space-y-3">
-              <Row label={t("ordersReceived")} value={myStats?.ordersReceived ?? 0} />
-              <Row label={t("audit_done")} value={myStats?.auditsDone ?? 0} />
-              <Row label={t("delivery_done")} value={myStats?.deliveriesDone ?? 0} />
-            </div>
-          )}
+          <h2 className="font-semibold text-lg mb-4">{t("activeEmployees")}</h2>
+          <ManagerEmpBlock />
         </Card>
       </div>
     </div>
