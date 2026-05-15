@@ -35,7 +35,6 @@ function Dashboard() {
 
 function ManagerDashboard() {
   const { t, lang } = useI18n();
-  const { user } = useAuth();
   const todayStart = new Date(); todayStart.setHours(0,0,0,0);
 
   const { data: stats } = useQuery({
@@ -194,11 +193,3 @@ function ManagerEmpBlock() {
   );
 }
 
-function Row({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-center justify-between py-2 border-b last:border-0">
-      <span className="text-sm">{label}</span>
-      <span className="text-2xl font-bold">{value}</span>
-    </div>
-  );
-}
